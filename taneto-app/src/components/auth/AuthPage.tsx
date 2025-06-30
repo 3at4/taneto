@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 interface AuthPageProps {
-  onLogin: (email: string, pass: string) => Promise<void>;
-  onSignUp: (email: string, pass: string) => Promise<void>;
+  onLogin: (email: string, pass: string) => Promise<any>; // 戻り値の型をanyに変更
+  onSignUp: (email: string, pass: string) => Promise<any>; // 戻り値の型をanyに変更
   error: string | null;
 }
 
