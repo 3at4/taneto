@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image'; // lucide-react の代わりにNext.jsのImageコンポーネントをインポート
+import Image from 'next/image';
 import { GardenState } from '@/lib/types';
 import { JournalApiResponse } from '@/lib/api/journalApi';
 
@@ -11,16 +11,16 @@ interface GardenViewProps {
   activeEffect?: JournalApiResponse['gardenEffect'] | null;
 }
 
-// 新しいアセットを使ったGardenEffectコンポーネント
-const GardenEffect = ({ effect }: { effect: JournalApiResponse['gardenEffect'] | null }) => {
+// GardenEffectが受け取るeffectの型を、undefinedも許容するように修正
+const GardenEffect = ({ effect }: { effect: JournalApiResponse['gardenEffect'] | null | undefined }) => {
   if (!effect) return null;
 
   const effects = {
     bloom: { src: '/garden/flower-01.svg', className: 'animate-bloom-pulse w-16 h-16' },
     butterfly: { src: '/garden/butterfly-01.svg', className: 'animate-butterfly-fly w-20 h-20' },
     sunshine: { src: '/garden/sun-day.svg', className: 'animate-sunshine-glow w-32 h-32 opacity-50' },
-    rain: { src: '/garden/cloud-day.svg', className: 'animate-rain-drop w-24 h-24 opacity-70' }, // 雨は雲のアセットを流用
-    calm: { src: '/garden/tree-base.svg', className: 'animate-calm-ripple w-16 h-16 opacity-30' }, // 穏やかは木のアセットを流用
+    rain: { src: '/garden/cloud-day.svg', className: 'animate-rain-drop w-24 h-24 opacity-70' },
+    calm: { src: '/garden/tree-base.svg', className: 'animate-calm-ripple w-16 h-16 opacity-30' },
   };
 
   const effectConfig = effects[effect];
@@ -33,7 +33,7 @@ const GardenEffect = ({ effect }: { effect: JournalApiResponse['gardenEffect'] |
         width={128}
         height={128}
         className={effectConfig.className}
-        unoptimized // SVGアニメーションのために最適化を無効化
+        unoptimized
       />
     </div>
   );
@@ -64,7 +64,6 @@ export default function GardenView({ state, userName = 'あなた', activeEffect
 
   return (
     <div className="bg-gradient-to-b from-slate-900 to-slate-800 p-4 md:p-6 h-full flex flex-col">
-      {/* Header */}
       <div className="text-center space-y-2 mb-4">
         <h2 className="text-xl font-medium text-emerald-400">
           {userName}さんの庭
@@ -74,11 +73,9 @@ export default function GardenView({ state, userName = 'あなた', activeEffect
         </p>
       </div>
 
-      {/* Garden visualization */}
       <div className={`relative flex-grow bg-gradient-to-b ${skyClass} rounded-lg overflow-hidden border border-slate-700`}>
         <GardenEffect effect={activeEffect} />
         
-        {/* Sky Object (Sun or Cloud) */}
         <div className="absolute top-4 right-4 z-10">
           <Image
             src={state.skyBrightness === 'bright' ? '/garden/sun-day.svg' : '/garden/cloud-day.svg'}
@@ -89,7 +86,6 @@ export default function GardenView({ state, userName = 'あなた', activeEffect
           />
         </div>
 
-        {/* Butterfly (persistent) */}
         {state.hasButterfly && (
           <div className="absolute top-12 left-1/4 z-10 animate-bounce">
             <Image
@@ -101,10 +97,8 @@ export default function GardenView({ state, userName = 'あなた', activeEffect
           </div>
         )}
 
-        {/* Ground */}
         <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-green-900/40 to-transparent"></div>
 
-        {/* Tree */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
           <Image
             src="/garden/tree-base.svg"
@@ -115,15 +109,14 @@ export default function GardenView({ state, userName = 'あなた', activeEffect
           />
         </div>
 
-        {/* Flowers */}
         <div className="absolute bottom-4 left-0 right-0 h-16 z-10">
           {Array.from({ length: state.flowerCount }).map((_, i) => (
             <div
               key={i}
               className={`absolute bottom-0 transition-all duration-500 ${isAnimating ? 'scale-110' : 'scale-100'}`}
               style={{
-                left: `${10 + (i * 15) % 80}%`, // 散りばめる
-                bottom: `${Math.floor(i / 5) * 10}px`, // 複数行に配置
+                left: `${10 + (i * 15) % 80}%`,
+                bottom: `${Math.floor(i / 5) * 10}px`,
                 animationDelay: `${i * 100}ms`,
                 transform: `rotate(${(i * 45)}deg) scale(0.8)`,
               }}
