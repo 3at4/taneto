@@ -1,54 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Book, Wrench } from 'lucide-react';
+import { Book, Wrench, LogOut } from 'lucide-react';
 import GardenView from '@/components/garden/GardenView';
 import DailyQuestion from '@/components/journal/DailyQuestion';
-import { storageUtils } from '@/lib/storage/localStorage';
 import { GardenState } from '@/lib/types';
-import { format } from 'date-fns';
 
 interface HomePageProps {
   onJournalClick: (question: string) => void;
   onCareClick: () => void;
   onHistoryClick: () => void;
+  onSignOut: () => void;
   gardenState: GardenState;
+  userName: string;
+  hasAnsweredToday: boolean;
+  hasCaredToday: boolean;
 }
 
-export default function HomePage({ onJournalClick, onCareClick, onHistoryClick, gardenState }: HomePageProps) {
-  const [userName, setUserName] = useState('');
-  const [hasAnsweredToday, setHasAnsweredToday] = useState(false);
-  const [hasCaredToday, setHasCaredToday] = useState(false);
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = () => {
-    // Load user name
-    const savedName = localStorage.getItem('taneto_user_name') || 'あなた';
-    setUserName(savedName);
-
-    // Load journal entries and daily logs
-    const entries = storageUtils.getJournalEntries();
-    const logs = storageUtils.getDailyLogs();
-    
-    // Check if user has answered today
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const todayEntry = entries.find(entry => entry.date === today);
-    setHasAnsweredToday(!!todayEntry);
-
-    // Check if user has cared today
-    const todayLog = logs.find(log => log.date === today);
-    setHasCaredToday(!!todayLog);
-  };
+export default function HomePage({ 
+  onJournalClick, 
+  onCareClick, 
+  onHistoryClick, 
+  onSignOut,
+  gardenState,
+  userName,
+  hasAnsweredToday,
+  hasCaredToday
+}: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
       {/* Header */}
-      <div className="p-6 space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
+      <header className="p-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
             <h1 className="text-2xl font-light text-emerald-400">
               おはようございます
             </h1>
@@ -56,20 +40,29 @@ export default function HomePage({ onJournalClick, onCareClick, onHistoryClick, 
               {userName}さん
             </p>
           </div>
-          <div className="text-slate-400 text-sm">
-            {(() => {
-              const now = new Date();
-              const month = now.getMonth() + 1;
-              const day = now.getDate();
-              const weekDay = ['日', '月', '火', '水', '木', '金', '土'][now.getDay()];
-              return `${month}月${day}日 (${weekDay})`;
-            })()}
+          <div className="flex items-center space-x-4">
+            <div className="text-slate-400 text-sm text-right">
+              {(() => {
+                const now = new Date();
+                const month = now.getMonth() + 1;
+                const day = now.getDate();
+                const weekDay = ['日', '月', '火', '水', '木', '金', '土'][now.getDay()];
+                return `${month}月${day}日 (${weekDay})`;
+              })()}
+            </div>
+            <button
+              onClick={onSignOut}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition-colors"
+              aria-label="ログアウト"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
-      <div className="px-6 space-y-6">
+      <main className="px-6 space-y-6">
         {/* Garden */}
         <GardenView state={gardenState} userName={userName} />
 
@@ -117,7 +110,7 @@ export default function HomePage({ onJournalClick, onCareClick, onHistoryClick, 
 
         {/* Bottom spacing for navigation */}
         <div className="h-20"></div>
-      </div>
+      </main>
     </div>
   );
 }

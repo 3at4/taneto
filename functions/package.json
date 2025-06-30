@@ -1,24 +1,27 @@
 {
-  "name": "hello-gemini-taneto",
+  "name": "taneto-ai-agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "main": "dist/index.js",
   "dependencies": {
-    "@google-cloud/functions-framework": "^3.3.1",
-    "@google/generative-ai": "^0.7.0",
+    "@google-cloud/functions-framework": "^3.5.1",
+    "@google-cloud/vertexai": "^1.10.0",
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.3.2"
   },
   "scripts": {
     "build": "tsc",
-    "start": "functions-framework --target=helloGeminiTaneto"
+    "start": "node --loader ts-node/esm src/index.ts",
+    "prestart:local": "npm run build",
+    "start:local": "GCLOUD_PROJECT=taneto-nurture-within functions-framework --target=tanetoAIAgent --source=dist --port=8081"
   },
   "devDependencies": {
-    "@types/node": "^24.0.7",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }

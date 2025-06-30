@@ -1,6 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { User } from 'firebase/auth';
+import { 
+  onAuthChange, 
+  signIn, 
+  signUp, 
+  logOut,
+  checkOnboardingCompleted,
+  setOnboardingCompleted,
+  subscribeToUserData,
+  saveData,
+  saveDailyLog
+} from '@/lib/firebase';
+import { JournalEntry, DailyLog, GardenState } from '@/lib/types';
+import { format } from 'date-fns';
+
+import AuthPage from '@/components/auth/AuthPage';
 import OnboardingStory from '@/components/onboarding/OnboardingStory';
 import InitialSetup from '@/components/onboarding/InitialSetup';
 import HomePage from '@/components/common/HomePage';
@@ -8,12 +24,10 @@ import JournalEditor from '@/components/journal/JournalEditor';
 import JournalHistory from '@/components/journal/JournalHistory';
 import DailyCare from '@/components/garden/DailyCare';
 import Toast from '@/components/ui/Toast';
-import { storageUtils } from '@/lib/storage/localStorage';
-import { subscribeToUserData, saveData } from '@/lib/firestore';
-import { JournalEntry, DailyLog, GardenState } from '@/lib/types';
-import { format } from 'date-fns';
 
 type AppState = 
+  | 'loading'
+  | 'auth'
   | 'onboarding-story'
   | 'onboarding-setup'
   | 'home'
@@ -22,72 +36,95 @@ type AppState =
   | 'daily-care';
 
 export default function TanetoApp() {
-  const [appState, setAppState] = useState<AppState>('onboarding-story');
+  const [appState, setAppState] = useState<AppState>('loading');
+  const [user, setUser] = useState<User | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [userName, setUserName] = useState('あなた');
+
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [currentEntry, setCurrentEntry] = useState<JournalEntry | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   
-  // New state for garden visualization
   const [gardenState, setGardenState] = useState<GardenState>({
     flowerCount: 0,
     skyBrightness: 'normal',
     hasButterfly: false,
   });
   
-  // New state for AI feedback
   const [aiReply, setAiReply] = useState<string | null>(null);
 
   useEffect(() => {
-    checkOnboardingStatus();
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setUserName(firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'あなた');
+        const isOnboardingDone = await checkOnboardingCompleted(firebaseUser.uid);
+        setAppState(isOnboardingDone ? 'home' : 'onboarding-story');
+      } else {
+        setUser(null);
+        setAppState('auth');
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Real-time data subscription
   useEffect(() => {
-    if (appState === 'home' || appState === 'journal-editor' || appState === 'daily-care') {
-      const unsubscribe = subscribeToUserData('default-user', (journals, tendingLogs) => {
-        // Calculate new garden state based on fetched data
+    if (user) {
+      const unsubscribe = subscribeToUserData(user.uid, (fetchedJournals, fetchedLogs) => {
+        setJournals(fetchedJournals);
+        setDailyLogs(fetchedLogs);
+
         const newGardenState: GardenState = {
-          flowerCount: journals.length,
-          skyBrightness: tendingLogs.length > 0 && tendingLogs[0].sleep === 'good' ? 'bright' : 'normal',
-          hasButterfly: tendingLogs.length > 0 && tendingLogs[0].exercise === true
+          flowerCount: fetchedJournals.length,
+          skyBrightness: fetchedLogs.length > 0 && fetchedLogs[0].sleep === 'good' ? 'bright' : 'normal',
+          hasButterfly: fetchedLogs.length > 0 && fetchedLogs[0].exercise === true
         };
-        
         setGardenState(newGardenState);
       });
-
-      // Cleanup function to unsubscribe when component unmounts or state changes
-      return () => {
-        if (unsubscribe) {
-          unsubscribe();
-        }
-      };
+      return () => unsubscribe();
     }
-  }, [appState]);
-
-  const checkOnboardingStatus = () => {
-    if (typeof window !== 'undefined') {
-      const isCompleted = storageUtils.isOnboardingCompleted();
-      if (isCompleted) {
-        setAppState('home');
+  }, [user]);
+  
+  const handleSignUp = async (email: string, pass: string) => {
+    try {
+      setAuthError(null);
+      await signUp(email, pass);
+    } catch (error) {
+      if (error instanceof Error) {
+        setAuthError(error.message);
+      } else {
+        setAuthError('An unknown error occurred.');
       }
     }
-    setIsLoading(false);
   };
 
-  const handleOnboardingStoryComplete = () => {
-    setAppState('onboarding-setup');
+  const handleLogin = async (email: string, pass: string) => {
+    try {
+      setAuthError(null);
+      await signIn(email, pass);
+    } catch (error) {
+      if (error instanceof Error) {
+        setAuthError(error.message);
+      } else {
+        setAuthError('An unknown error occurred.');
+      }
+    }
   };
+  
+  const handleOnboardingStoryComplete = () => setAppState('onboarding-setup');
 
-  const handleOnboardingSetupComplete = () => {
-    storageUtils.setOnboardingCompleted();
-    setAppState('home');
+  const handleOnboardingSetupComplete = async (name: string) => {
+    if (user) {
+      setUserName(name);
+      await setOnboardingCompleted(user.uid);
+      setAppState('home');
+    }
   };
 
   const handleJournalClick = (question: string) => {
-    // Check if there's already an entry for today
     const today = format(new Date(), 'yyyy-MM-dd');
-    const entries = storageUtils.getJournalEntries();
-    const todayEntry = entries.find(entry => entry.date === today);
+    const todayEntry = journals.find(entry => entry.date === today);
     
     setCurrentQuestion(question);
     setCurrentEntry(todayEntry);
@@ -95,39 +132,23 @@ export default function TanetoApp() {
   };
 
   const handleJournalSave = async (entry: JournalEntry) => {
+    if (!user) return;
     try {
-      // Save data and get AI response
-      const aiMessage = await saveData(entry.content);
-      
-      // Set AI reply and clear it after 5 seconds
+      const aiMessage = await saveData(entry.content, user.uid);
       setAiReply(aiMessage);
-      setTimeout(() => {
-        setAiReply(null);
-      }, 5000);
-      
-      // Also save to local storage for backward compatibility
-      storageUtils.saveJournalEntry(entry);
-      
+      setTimeout(() => setAiReply(null), 5000);
       setAppState('home');
     } catch (error) {
       console.error('Error saving journal entry:', error);
-      // Fallback to local storage only
-      storageUtils.saveJournalEntry(entry);
       setAppState('home');
     }
   };
 
-  const handleJournalBack = () => {
-    setAppState('home');
-  };
-
-  const handleHistoryClick = () => {
-    setAppState('journal-history');
-  };
-
-  const handleHistoryBack = () => {
-    setAppState('home');
-  };
+  const handleJournalBack = () => setAppState('home');
+  const handleHistoryClick = () => setAppState('journal-history');
+  const handleHistoryBack = () => setAppState('home');
+  const handleCareClick = () => setAppState('daily-care');
+  const handleCareBack = () => setAppState('home');
 
   const handleHistoryEntrySelect = (entry: JournalEntry) => {
     setCurrentQuestion(entry.question);
@@ -135,21 +156,24 @@ export default function TanetoApp() {
     setAppState('journal-editor');
   };
 
-  const handleCareClick = () => {
-    setAppState('daily-care');
+  const handleCareSave = async (log: DailyLog) => {
+    if(user) {
+      await saveDailyLog(log, user.uid);
+      setAppState('home');
+    }
   };
 
-  const handleCareBack = () => {
-    setAppState('home');
-  };
+  const hasAnsweredToday = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return journals.some(entry => entry.date === today);
+  }, [journals]);
 
-  const handleCareSave = (log: DailyLog) => {
-    // Save to local storage for backward compatibility
-    storageUtils.saveDailyLog(log);
-    setAppState('home');
-  };
+  const hasCaredToday = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return dailyLogs.some(log => log.date === today);
+  }, [dailyLogs]);
 
-  if (isLoading) {
+  if (appState === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -162,23 +186,27 @@ export default function TanetoApp() {
 
   return (
     <div className="min-h-screen">
+      {appState === 'auth' && (
+        <AuthPage onLogin={handleLogin} onSignUp={handleSignUp} error={authError} />
+      )}
       {appState === 'onboarding-story' && (
         <OnboardingStory onComplete={handleOnboardingStoryComplete} />
       )}
-      
       {appState === 'onboarding-setup' && (
         <InitialSetup onComplete={handleOnboardingSetupComplete} />
       )}
-      
-      {appState === 'home' && (
+      {appState === 'home' && user && (
         <HomePage 
           onJournalClick={handleJournalClick}
           onCareClick={handleCareClick}
           onHistoryClick={handleHistoryClick}
           gardenState={gardenState}
+          onSignOut={logOut}
+          userName={userName}
+          hasAnsweredToday={hasAnsweredToday}
+          hasCaredToday={hasCaredToday}
         />
       )}
-      
       {appState === 'journal-editor' && (
         <JournalEditor
           question={currentQuestion}
@@ -187,27 +215,20 @@ export default function TanetoApp() {
           onSave={handleJournalSave}
         />
       )}
-      
       {appState === 'journal-history' && (
         <JournalHistory
+          entries={journals}
           onBack={handleHistoryBack}
           onEntrySelect={handleHistoryEntrySelect}
         />
       )}
-      
       {appState === 'daily-care' && (
         <DailyCare
           onBack={handleCareBack}
           onSave={handleCareSave}
-          existingLog={(() => {
-            const today = format(new Date(), 'yyyy-MM-dd');
-            const logs = storageUtils.getDailyLogs();
-            return logs.find(log => log.date === today);
-          })()}
+          existingLog={dailyLogs.find(log => log.date === format(new Date(), 'yyyy-MM-dd'))}
         />
       )}
-      
-      {/* AI Feedback Toast */}
       <Toast message={aiReply} />
     </div>
   );

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Sprout, ArrowRight } from 'lucide-react';
 
 interface InitialSetupProps {
-  onComplete: () => void;
+  onComplete: (name: string) => void;
 }
 
 export default function InitialSetup({ onComplete }: InitialSetupProps) {
@@ -15,9 +15,7 @@ export default function InitialSetup({ onComplete }: InitialSetupProps) {
     if (step === 1 && name.trim()) {
       setStep(2);
     } else if (step === 2) {
-      // Save user preferences to local storage
-      localStorage.setItem('taneto_user_name', name);
-      onComplete();
+      onComplete(name);
     }
   };
 

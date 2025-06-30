@@ -1,41 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Calendar, MessageSquare, Search } from 'lucide-react';
 import { JournalEntry } from '@/lib/types';
-import { storageUtils } from '@/lib/storage/localStorage';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface JournalHistoryProps {
+  entries: JournalEntry[];
   onBack: () => void;
   onEntrySelect: (entry: JournalEntry) => void;
 }
 
-export default function JournalHistory({ onBack, onEntrySelect }: JournalHistoryProps) {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+export default function JournalHistory({ entries, onBack, onEntrySelect }: JournalHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadEntries();
-  }, []);
-
-  const loadEntries = () => {
-    try {
-      const savedEntries = storageUtils.getJournalEntries();
-      // Sort by date descending (newest first)
-      savedEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setEntries(savedEntries);
-    } catch (error) {
-      console.error('Failed to load journal entries:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const filteredEntries = entries.filter(entry =>
-    entry.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    entry.question.toLowerCase().includes(searchTerm.toLowerCase())
+    (entry.content && entry.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (entry.question && entry.question.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const groupedEntries = filteredEntries.reduce((groups, entry) => {
@@ -47,18 +28,10 @@ export default function JournalHistory({ onBack, onEntrySelect }: JournalHistory
     return groups;
   }, {} as Record<string, JournalEntry[]>);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
       {/* Header */}
-      <div className="p-6 border-b border-slate-700 space-y-4">
+      <div className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-6 border-b border-slate-700 space-y-4">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -111,11 +84,15 @@ export default function JournalHistory({ onBack, onEntrySelect }: JournalHistory
                   <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
                   <span className="text-sm font-medium">
                     {(() => {
-                      const dateObj = parseISO(date);
-                      const month = dateObj.getMonth() + 1;
-                      const day = dateObj.getDate();
-                      const weekDay = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
-                      return `${month}月${day}日 (${weekDay})`;
+                      try {
+                        const dateObj = parseISO(date);
+                        const month = dateObj.getMonth() + 1;
+                        const day = dateObj.getDate();
+                        const weekDay = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
+                        return `${month}月${day}日 (${weekDay})`;
+                      } catch {
+                        return '日付不明';
+                      }
                     })()}
                   </span>
                 </div>
@@ -130,17 +107,17 @@ export default function JournalHistory({ onBack, onEntrySelect }: JournalHistory
                     >
                       <div className="space-y-2">
                         <p className="text-sm text-slate-400 group-hover:text-slate-300 line-clamp-2">
-                          {entry.question}
+                          {entry.question || '日々の記録'}
                         </p>
                         <p className="text-slate-200 group-hover:text-white line-clamp-3">
                           {entry.content}
                         </p>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mt-2">
                           <span className="text-xs text-slate-500">
-                            {format(entry.createdAt, 'HH:mm')}
+                            {entry.createdAt && isValid(new Date(entry.createdAt)) ? format(new Date(entry.createdAt), 'HH:mm') : ''}
                           </span>
                           <div className="text-xs text-slate-500">
-                            {entry.content.length}文字
+                            {entry.content?.length || 0}文字
                           </div>
                         </div>
                       </div>
