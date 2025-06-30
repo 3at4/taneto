@@ -1,7 +1,7 @@
 'use client';
 
 import { Book, Wrench, LogOut } from 'lucide-react';
-import GardenView from '@/components/garden/GardenView';
+// import GardenView from '@/components/garden/GardenView'; // GardenViewはpage.tsxで直接レンダリングするため削除
 import DailyQuestion from '@/components/journal/DailyQuestion';
 import { GardenState } from '@/lib/types';
 
@@ -10,18 +10,18 @@ interface HomePageProps {
   onCareClick: () => void;
   onHistoryClick: () => void;
   onSignOut: () => void;
-  gardenState: GardenState;
+  // gardenState: GardenState; // page.tsxで直接GardenViewに渡すため削除
   userName: string;
   hasAnsweredToday: boolean;
   hasCaredToday: boolean;
 }
 
-export default function HomePage({ 
-  onJournalClick, 
-  onCareClick, 
-  onHistoryClick, 
+export default function HomePage({
+  onJournalClick,
+  onCareClick,
+  onHistoryClick,
   onSignOut,
-  gardenState,
+  // gardenState, // page.tsxで直接GardenViewに渡すため削除
   userName,
   hasAnsweredToday,
   hasCaredToday
@@ -63,12 +63,11 @@ export default function HomePage({
 
       {/* Content */}
       <main className="px-6 space-y-6">
-        {/* Garden */}
-        <GardenView state={gardenState} userName={userName} />
+        {/* GardenViewを削除 */}
 
         {/* Daily Question */}
-        <DailyQuestion 
-          onQuestionClick={onJournalClick} 
+        <DailyQuestion
+          onQuestionClick={onJournalClick}
           hasAnsweredToday={hasAnsweredToday}
         />
 

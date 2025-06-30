@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, MessageSquare } from 'lucide-react';
 import { JournalEntry } from '@/lib/types';
 import { storageUtils } from '@/lib/storage/localStorage';
-import { AI_RESPONSES } from '@/lib/constants/questions';
 import { format } from 'date-fns';
+import { submitJournalEntry, JournalApiResponse } from '@/lib/api/journalApi';
 
 interface JournalEditorProps {
   question: string;
   existingEntry?: JournalEntry;
   onBack: () => void;
-  onSave: (entry: JournalEntry) => void;
+  onSave: (entry: JournalEntry, gardenEffect: JournalApiResponse['gardenEffect']) => void; // 変更
 }
 
 // Generate a UUID that works both in modern browsers (with Web Crypto) and older environments
@@ -54,18 +54,19 @@ export default function JournalEditor({ question, existingEntry, onBack, onSave 
         storageUtils.saveJournalEntry(entry);
       }
       
-      // Show AI response
-      const randomResponse = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
-      setAiResponse(randomResponse);
+      const apiResponse: JournalApiResponse = await submitJournalEntry(content.trim());
+      setAiResponse(apiResponse.aiResponseText);
+      // console.log('Garden Effect:', apiResponse.gardenEffect); // page.tsxで管理するため、ここでは削除またはコメントアウト
+      
       setShowResponse(true);
 
       // Wait for response animation, then call onSave
       setTimeout(() => {
-        onSave(entry);
+        onSave(entry, apiResponse.gardenEffect); // ここを変更
       }, 3000);
 
     } catch (error) {
-      console.error('Failed to save journal entry:', error);
+      console.error('Failed to save journal entry or get AI response:', error);
     } finally {
       setIsSaving(false);
     }

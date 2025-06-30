@@ -24,6 +24,10 @@ import JournalEditor from '@/components/journal/JournalEditor';
 import JournalHistory from '@/components/journal/JournalHistory';
 import DailyCare from '@/components/garden/DailyCare';
 import Toast from '@/components/ui/Toast';
+import GardenView from '@/components/garden/GardenView';
+
+// JournalApiResponse をインポートして型定義に利用
+import { JournalApiResponse } from '@/lib/api/journalApi';
 
 type AppState = 
   | 'loading'
@@ -51,6 +55,9 @@ export default function TanetoApp() {
     skyBrightness: 'normal',
     hasButterfly: false,
   });
+
+  // 新しいstate: activeGardenEffect を追加
+  const [activeGardenEffect, setActiveGardenEffect] = useState<JournalApiResponse['gardenEffect'] | null>(null);
   
   const [aiReply, setAiReply] = useState<string | null>(null);
 
@@ -131,12 +138,19 @@ export default function TanetoApp() {
     setAppState('journal-editor');
   };
 
-  const handleJournalSave = async (entry: JournalEntry) => {
+  // handleJournalSave のシグネチャとロジックを更新
+  const handleJournalSave = async (entry: JournalEntry, receivedGardenEffect: JournalApiResponse['gardenEffect']) => {
     if (!user) return;
     try {
       const aiMessage = await saveData(entry.content, user.uid);
       setAiReply(aiMessage);
       setTimeout(() => setAiReply(null), 5000);
+
+      // receivedGardenEffect を activeGardenEffect にセット
+      setActiveGardenEffect(receivedGardenEffect);
+      // 一定時間後に activeGardenEffect をリセット
+      setTimeout(() => setActiveGardenEffect(null), 2000); // 例: 2秒後にリセット
+
       setAppState('home');
     } catch (error) {
       console.error('Error saving journal entry:', error);
@@ -173,6 +187,8 @@ export default function TanetoApp() {
     return dailyLogs.some(log => log.date === today);
   }, [dailyLogs]);
 
+  const showTwoPaneLayout = user && !['auth', 'onboarding-story', 'onboarding-setup'].includes(appState);
+
   if (appState === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
@@ -185,51 +201,64 @@ export default function TanetoApp() {
   }
 
   return (
-    <div className="min-h-screen">
-      {appState === 'auth' && (
-        <AuthPage onLogin={handleLogin} onSignUp={handleSignUp} error={authError} />
+    <div className={`min-h-screen ${showTwoPaneLayout ? 'flex' : ''}`}>
+      {/* Left Pane (Conditional rendering of main app states) */}
+      <div className={`${showTwoPaneLayout ? 'w-full md:w-1/2' : 'w-full'}`}>
+        {appState === 'auth' && (
+          <AuthPage onLogin={handleLogin} onSignUp={handleSignUp} error={authError} />
+        )}
+        {appState === 'onboarding-story' && (
+          <OnboardingStory onComplete={handleOnboardingStoryComplete} />
+        )}
+        {appState === 'onboarding-setup' && (
+          <InitialSetup onComplete={handleOnboardingSetupComplete} />
+        )}
+        {appState === 'home' && user && (
+          <HomePage 
+            onJournalClick={handleJournalClick}
+            onCareClick={handleCareClick}
+            onHistoryClick={handleHistoryClick}
+            onSignOut={logOut}
+            userName={userName}
+            hasAnsweredToday={hasAnsweredToday}
+            hasCaredToday={hasCaredToday}
+          />
+        )}
+        {appState === 'journal-editor' && (
+          <JournalEditor
+            question={currentQuestion}
+            existingEntry={currentEntry}
+            onBack={handleJournalBack}
+            onSave={handleJournalSave}
+          />
+        )}
+        {appState === 'journal-history' && (
+          <JournalHistory
+            entries={journals}
+            onBack={handleHistoryBack}
+            onEntrySelect={handleHistoryEntrySelect}
+          />
+        )}
+        {appState === 'daily-care' && (
+          <DailyCare
+            onBack={handleCareBack}
+            onSave={handleCareSave}
+            existingLog={dailyLogs.find(log => log.date === format(new Date(), 'yyyy-MM-dd'))}
+          />
+        )}
+        <Toast message={aiReply} />
+      </div>
+
+      {/* Right Pane (Always shows GardenView when user is logged in) */}
+      {showTwoPaneLayout && user && (
+        <div className="hidden md:block w-1/2 bg-slate-900 overflow-y-auto">
+          <GardenView 
+            state={gardenState} 
+            userName={userName} 
+            activeEffect={activeGardenEffect} // activeGardenEffect を GardenView に渡す
+          />
+        </div>
       )}
-      {appState === 'onboarding-story' && (
-        <OnboardingStory onComplete={handleOnboardingStoryComplete} />
-      )}
-      {appState === 'onboarding-setup' && (
-        <InitialSetup onComplete={handleOnboardingSetupComplete} />
-      )}
-      {appState === 'home' && user && (
-        <HomePage 
-          onJournalClick={handleJournalClick}
-          onCareClick={handleCareClick}
-          onHistoryClick={handleHistoryClick}
-          gardenState={gardenState}
-          onSignOut={logOut}
-          userName={userName}
-          hasAnsweredToday={hasAnsweredToday}
-          hasCaredToday={hasCaredToday}
-        />
-      )}
-      {appState === 'journal-editor' && (
-        <JournalEditor
-          question={currentQuestion}
-          existingEntry={currentEntry}
-          onBack={handleJournalBack}
-          onSave={handleJournalSave}
-        />
-      )}
-      {appState === 'journal-history' && (
-        <JournalHistory
-          entries={journals}
-          onBack={handleHistoryBack}
-          onEntrySelect={handleHistoryEntrySelect}
-        />
-      )}
-      {appState === 'daily-care' && (
-        <DailyCare
-          onBack={handleCareBack}
-          onSave={handleCareSave}
-          existingLog={dailyLogs.find(log => log.date === format(new Date(), 'yyyy-MM-dd'))}
-        />
-      )}
-      <Toast message={aiReply} />
     </div>
   );
 }

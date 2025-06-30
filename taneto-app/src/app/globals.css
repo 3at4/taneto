@@ -10,6 +10,56 @@
   animation: fade-in 0.8s ease-in-out;
 }
 
+/* New Garden Animations */
+@keyframes bloom-pulse {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bloom-pulse {
+  animation: bloom-pulse 1s ease-out forwards;
+}
+
+@keyframes butterfly-fly {
+  0% { transform: translateX(-100%) translateY(0); opacity: 0; }
+  25% { transform: translateX(-50%) translateY(-20px); opacity: 1; }
+  50% { transform: translateX(0%) translateY(0); opacity: 1; }
+  75% { transform: translateX(50%) translateY(-20px); opacity: 1; }
+  100% { transform: translateX(100%) translateY(0); opacity: 0; }
+}
+
+.animate-butterfly-fly {
+  animation: butterfly-fly 3s ease-in-out forwards;
+}
+
+@keyframes sunshine-glow {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-sunshine-glow {
+  animation: sunshine-glow 1.5s ease-in-out forwards;
+}
+
+@keyframes rain-drop {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-rain-drop {
+  animation: rain-drop 1s ease-out forwards;
+}
+
+@keyframes calm-ripple {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 0.5; }
+}
+
+.animate-calm-ripple {
+  animation: calm-ripple 1.5s ease-out forwards;
+}
+
 /* Text truncation utilities */
 .line-clamp-2 {
   display: -webkit-box;
