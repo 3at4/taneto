@@ -20,10 +20,9 @@ import {
   setDoc,
   Firestore
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable, Functions } from 'firebase/functions'; // ADDED: getFunctions, httpsCallable, Functions type
+import { getFunctions, Functions } from 'firebase/functions';
 import { JournalEntry, DailyLog } from '@/lib/types';
 
-// Firebase configuration (uses environment variables)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -36,12 +35,9 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
-let functionsInstance: Functions | null = null; // ADDED: functionsInstance
+let functionsInstance: Functions | null = null;
 
-// Initialize Firebase only in the client-side environment
-// and only if it hasn't been initialized yet
 if (typeof window !== 'undefined' && getApps().length === 0) {
-  // Check if all essential environment variables are set
   const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
   const allConfigPresent = requiredConfigKeys.every(key => firebaseConfig[key]);
 
@@ -49,20 +45,17 @@ if (typeof window !== 'undefined' && getApps().length === 0) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    functionsInstance = getFunctions(app, 'us-central1'); // Initialize Functions with region
+    functionsInstance = getFunctions(app, 'us-central1');
   } else {
     console.warn('Firebase environment variables are not fully set. Firebase services will not be available.');
   }
 } else if (typeof window !== 'undefined' && getApps().length > 0) {
-  // If app is already initialized (e.g., during HMR in development), get the existing instance
   app = getApp();
   auth = getAuth(app);
   db = getFirestore(app);
-  functionsInstance = getFunctions(app, 'us-central1'); // Get functions instance from existing app
+  functionsInstance = getFunctions(app, 'us-central1');
 }
 
-// --- Auth Functions ---
-// All functions that use `auth` should now check for its existence
 export const signUp = (email: string, pass: string) => {
   if (!auth) throw new Error("Firebase Auth is not initialized. Cannot sign up.");
   return createUserWithEmailAndPassword(auth, email, pass);
@@ -81,21 +74,18 @@ export const logOut = () => {
 export const onAuthChange = (callback: (user: User | null) => void) => {
   if (!auth) {
     console.warn("Firebase Auth is not initialized. onAuthChange will not subscribe.");
-    return () => {}; // Return a no-op unsubscribe function
+    return () => {};
   }
   return onAuthStateChanged(auth, callback);
 };
 
-// Export auth, db, and functionsInstance for use in other modules
-export { auth, db, functionsInstance }; // MODIFIED export
+export { auth, db, functionsInstance };
 
-// --- Firestore Functions ---
-// Functions that use `db` will now check for its existence
-const AI_FUNCTION_URL = process.env.NEXT_PUBLIC_AI_FUNCTION_URL || 'https://your-cloud-function-url'; // This will be removed/replaced in the next step
+const AI_FUNCTION_URL = process.env.NEXT_PUBLIC_AI_FUNCTION_URL || 'https://your-cloud-function-url';
 
 export async function saveData(content: string, userId: string): Promise<string> {
   if (!userId) throw new Error("User is not authenticated.");
-  if (!db) throw new Error("Firebase Firestore is not initialized. Cannot save data."); // ADDED check
+  if (!db) throw new Error("Firebase Firestore is not initialized. Cannot save data.");
 
   try {
     const journalEntry = {
@@ -105,7 +95,6 @@ export async function saveData(content: string, userId: string): Promise<string>
     };
     await addDoc(collection(db, 'users', userId, 'journals'), journalEntry);
 
-    // THIS PART WILL BE REPLACED IN STEP 2 TO USE `functionsInstance` and `httpsCallable`
     const response = await fetch(AI_FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
