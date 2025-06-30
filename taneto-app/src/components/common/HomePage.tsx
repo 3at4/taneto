@@ -1,8 +1,7 @@
 'use client';
 
-import { Book, Wrench, LogOut } from 'lucide-react';
+import { History, Droplets, LogOut } from 'lucide-react'; // アイコンを変更: Book, Wrench -> History, Droplets
 import DailyQuestion from '@/components/journal/DailyQuestion';
-// import { GardenState } from '@/lib/types'; // この行を削除
 
 interface HomePageProps {
   onJournalClick: (question: string) => void;
@@ -13,6 +12,24 @@ interface HomePageProps {
   hasAnsweredToday: boolean;
   hasCaredToday: boolean;
 }
+
+const ActionButton = ({ icon: Icon, title, subtitle, onClick, hasCompleted, colorClass }) => (
+  <button
+    onClick={onClick}
+    className="bg-slate-800/50 hover:bg-slate-800 rounded-lg p-4 group border-2 border-slate-700 hover:border-emerald-700/50 transition-all duration-300 flex items-center space-x-4 transform hover:scale-[1.02]"
+  >
+    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClass} bg-opacity-10`}>
+      <Icon className={`w-6 h-6 ${colorClass}`} />
+    </div>
+    <div className="text-left">
+      <h3 className="font-medium text-slate-200 group-hover:text-white transition-colors">{title}</h3>
+      <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">{subtitle}</p>
+    </div>
+    {hasCompleted && (
+      <div className="ml-auto w-2 h-2 bg-emerald-400 rounded-full self-start mt-1"></div>
+    )}
+  </button>
+);
 
 export default function HomePage({
   onJournalClick,
@@ -31,35 +48,24 @@ export default function HomePage({
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <h1 className="text-2xl font-light text-emerald-400">
-              おはようございます
+              おはようございます、{userName}さん
             </h1>
             <p className="text-slate-400">
-              {userName}さん
+              {new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'long' })}
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-slate-400 text-sm text-right">
-              {(() => {
-                const now = new Date();
-                const month = now.getMonth() + 1;
-                const day = now.getDate();
-                const weekDay = ['日', '月', '火', '水', '木', '金', '土'][now.getDay()];
-                return `${month}月${day}日 (${weekDay})`;
-              })()}
-            </div>
-            <button
-              onClick={onSignOut}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition-colors"
-              aria-label="ログアウト"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={onSignOut}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition-colors"
+            aria-label="ログアウト"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
       {/* Content */}
-      <main className="px-6 space-y-6">
+      <main className="px-6 py-2 space-y-8">
         {/* Daily Question */}
         <DailyQuestion
           onQuestionClick={onJournalClick}
@@ -67,43 +73,27 @@ export default function HomePage({
         />
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
+        <div className="space-y-4">
+          <ActionButton
+            icon={Droplets}
+            title="手入れをする"
+            subtitle={hasCaredToday ? '今日の記録は完了しました' : '睡眠・運動・ストレスの記録'}
             onClick={onCareClick}
-            className="bg-slate-800 hover:bg-slate-700 rounded-lg p-4 border border-slate-700 hover:border-slate-600 transition-colors duration-200 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <Wrench className="w-6 h-6 text-emerald-400" />
-              {hasCaredToday && (
-                <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-              )}
-            </div>
-            <div className="text-left space-y-1">
-              <h3 className="font-medium text-slate-200">手入れをする</h3>
-              <p className="text-xs text-slate-400">
-                {hasCaredToday ? '今日の記録を見る' : '睡眠・運動・ストレス'}
-              </p>
-            </div>
-          </button>
-
-          <button
+            hasCompleted={hasCaredToday}
+            colorClass="text-blue-400"
+          />
+          <ActionButton
+            icon={History}
+            title="記録を見る"
+            subtitle="過去のジャーナルを振り返る"
             onClick={onHistoryClick}
-            className="bg-slate-800 hover:bg-slate-700 rounded-lg p-4 border border-slate-700 hover:border-slate-600 transition-colors duration-200 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <Book className="w-6 h-6 text-blue-400" />
-            </div>
-            <div className="text-left space-y-1">
-              <h3 className="font-medium text-slate-200">記録を見る</h3>
-              <p className="text-xs text-slate-400">
-                過去の振り返り
-              </p>
-            </div>
-          </button>
+            hasCompleted={false} // History button doesn't have a 'completed' state in this context
+            colorClass="text-purple-400"
+          />
         </div>
 
         {/* Bottom spacing for navigation */}
-        <div className="h-20"></div>
+        <div className="h-12"></div>
       </main>
     </div>
   );
