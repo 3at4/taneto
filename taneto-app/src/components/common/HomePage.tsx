@@ -1,7 +1,8 @@
 'use client';
 
-import { History, Droplets, LogOut } from 'lucide-react'; // アイコンを変更: Book, Wrench -> History, Droplets
+import { History, Droplets, LogOut } from 'lucide-react';
 import DailyQuestion from '@/components/journal/DailyQuestion';
+import type { ElementType } from 'react'; // ElementTypeの型をインポート
 
 interface HomePageProps {
   onJournalClick: (question: string) => void;
@@ -13,7 +14,17 @@ interface HomePageProps {
   hasCaredToday: boolean;
 }
 
-const ActionButton = ({ icon: Icon, title, subtitle, onClick, hasCompleted, colorClass }) => (
+// ActionButtonのプロップに型を定義
+interface ActionButtonProps {
+  icon: ElementType;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  hasCompleted: boolean;
+  colorClass: string;
+}
+
+const ActionButton = ({ icon: Icon, title, subtitle, onClick, hasCompleted, colorClass }: ActionButtonProps) => (
   <button
     onClick={onClick}
     className="bg-slate-800/50 hover:bg-slate-800 rounded-lg p-4 group border-2 border-slate-700 hover:border-emerald-700/50 transition-all duration-300 flex items-center space-x-4 transform hover:scale-[1.02]"
