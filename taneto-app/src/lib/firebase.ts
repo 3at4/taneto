@@ -81,7 +81,10 @@ export const onAuthChange = (callback: (user: User | null) => void) => {
 
 export const saveJournalEntryToFirestore = async (entry: Omit<JournalEntry, 'id'>, userId: string): Promise<void> => {
     if (!userId) throw new Error("User is not authenticated.");
-    if (!db) throw new Error("Firebase Firestore is not initialized.");
+    if (!db) {
+        console.error("Firestore is not initialized. Cannot save journal entry.");
+        return;
+    }
     await addDoc(collection(db, 'users', userId, 'journals'), entry);
 }
 
@@ -91,7 +94,7 @@ export function subscribeToUserData(
 ) {
   if (!userId) return () => {};
   if (!db) {
-    console.warn("Firebase Firestore is not initialized.");
+    console.warn("Firebase Firestore is not initialized. Data subscription will not work.");
     return () => {};
   }
 
@@ -111,13 +114,19 @@ export function subscribeToUserData(
 
 export async function saveDailyLog(log: Omit<DailyLog, 'id'>, userId: string): Promise<void> {
     if (!userId) throw new Error("User is not authenticated.");
-    if (!db) throw new Error("Firebase Firestore is not initialized.");
+    if (!db) {
+        console.error("Firestore is not initialized. Cannot save daily log.");
+        return;
+    }
     await addDoc(collection(db, 'users', userId, 'dailyLogs'), log);
 }
 
 export const checkOnboardingCompleted = async (userId: string): Promise<boolean> => {
     if (!userId) return false;
-    if (!db) throw new Error("Firebase Firestore is not initialized.");
+    if (!db) {
+        console.error("Firestore is not initialized. Cannot check onboarding status.");
+        return false;
+    }
     const userDocRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userDocRef);
     return docSnap.exists() && docSnap.data().onboardingCompleted === true;
@@ -125,6 +134,10 @@ export const checkOnboardingCompleted = async (userId: string): Promise<boolean>
 
 export const setOnboardingCompleted = async (userId: string): Promise<void> => {
     if (!userId) throw new Error("User is not authenticated.");
+    if (!db) {
+        console.error("Firestore is not initialized. Cannot set onboarding status.");
+        return;
+    }
     const userDocRef = doc(db, 'users', userId);
     await setDoc(userDocRef, { onboardingCompleted: true }, { merge: true });
 };
