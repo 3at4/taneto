@@ -5,7 +5,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
-  // Your existing configuration
+  output: 'export', // この行を追加
+  // その他の既存設定もここに追加可能
 };
 
 export default withBundleAnalyzer(nextConfig);

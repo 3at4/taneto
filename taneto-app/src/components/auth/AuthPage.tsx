@@ -3,7 +3,9 @@
 import { useState } from 'react';
 
 interface AuthPageProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onLogin: (email: string, pass: string) => Promise<any>; // 戻り値の型をanyに変更
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSignUp: (email: string, pass: string) => Promise<any>; // 戻り値の型をanyに変更
   error: string | null;
 }
