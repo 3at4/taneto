@@ -12,14 +12,6 @@ export interface JournalApiResponse {
   gardenEffect: 'bloom' | 'butterfly' | 'sunshine' | 'rain' | 'calm';
 }
 
-const generateUUID = () => {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
-};
-  
-
 export async function submitJournal(question: string, content: string): Promise<JournalApiResponse> {
   const user = auth?.currentUser;
   if (!user) {

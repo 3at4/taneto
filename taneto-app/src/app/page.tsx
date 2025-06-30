@@ -95,8 +95,8 @@ export default function TanetoApp() {
 
   const handleOnboardingSetupComplete = async (name: string) => {
     if (user) {
-      setUserName(name);
       await setOnboardingCompleted(user.uid);
+      setUserName(name);
       setAppState('home');
     }
   };
@@ -115,25 +115,24 @@ export default function TanetoApp() {
       const response = await submitJournal(currentQuestion, content);
       setAiReply(response.aiResponseText);
       setActiveGardenEffect(response.gardenEffect);
-      setTimeout(() => setActiveGardenEffect(null), 2000); // Reset effect after animation
-      // The JournalEditor will show the response screen, onBack will handle returning to home
+      setTimeout(() => setActiveGardenEffect(null), 3000); // Effect duration
     } catch (error) {
       console.error('Error submitting journal:', error);
-      setAiReply('エラーが発生しました。もう一度お試しください。');
+      const message = error instanceof Error ? error.message : '不明なエラーが発生しました。';
+      setAiReply(`エラー: ${message}`);
     } finally {
       setIsSaving(false);
     }
   };
   
   const handleJournalBack = () => {
-    setAiReply(null); // Clear AI reply when going back
+    setAiReply(null);
     setAppState('home');
   };
 
   const handleHistoryClick = () => setAppState('journal-history');
   const handleHistoryBack = () => setAppState('home');
   const handleCareClick = () => setAppState('daily-care');
-  
   const handleCareBack = () => setAppState('home');
 
   const handleCareSave = async (log: Omit<DailyLog, 'id'>) => {
@@ -154,25 +153,65 @@ export default function TanetoApp() {
 
   const showTwoPaneLayout = user && !['auth', 'onboarding-story', 'onboarding-setup', 'loading'].includes(appState);
 
-  if (appState === 'loading') {
-    // ... loading UI
-  }
-
-  return (
-    <div className={`min-h-screen ${showTwoPaneLayout ? 'flex' : ''}`}>
-      <div className={`${showTwoPaneLayout ? 'w-full md:w-1/2' : 'w-full'}`}>
-        {/* ... component rendering based on appState */}
-        {appState === 'journal-editor' && (
-          <JournalEditor
+  const renderContent = () => {
+    switch (appState) {
+      case 'auth':
+        return <AuthPage onLogin={handleLogin} onSignUp={handleSignUp} error={authError} />;
+      case 'onboarding-story':
+        return <OnboardingStory onComplete={handleOnboardingStoryComplete} />;
+      case 'onboarding-setup':
+        return <InitialSetup onComplete={handleOnboardingSetupComplete} />;
+      case 'home':
+        return <HomePage 
+            onJournalClick={handleJournalClick}
+            onCareClick={handleCareClick}
+            onHistoryClick={handleHistoryClick}
+            onSignOut={logOut}
+            userName={userName}
+            hasAnsweredToday={hasAnsweredToday}
+            hasCaredToday={hasCaredToday}
+        />;
+      case 'journal-editor':
+        return <JournalEditor
             question={currentQuestion}
             existingEntry={currentEntry}
             onBack={handleJournalBack}
             onSave={handleJournalSave}
             isSaving={isSaving}
             aiResponse={aiReply}
-          />
-        )}
-        {/* ... other components */}
+        />;
+      case 'journal-history':
+        return <JournalHistory
+            entries={journals}
+            onBack={handleHistoryBack}
+            onEntrySelect={handleHistoryEntrySelect}
+        />;
+      case 'daily-care':
+        return <DailyCare
+            onBack={handleCareBack}
+            onSave={handleCareSave}
+            existingLog={dailyLogs.find(log => log.date === format(new Date(), 'yyyy-MM-dd'))}
+        />;
+      case 'loading':
+      default:
+        return (
+          <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-slate-400">読み込み中...</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className={`min-h-screen ${showTwoPaneLayout ? 'flex' : ''}`}>
+      <div className={`${showTwoPaneLayout ? 'w-full md:w-1/2' : 'w-full'} flex flex-col`}>
+        <div className="flex-grow">
+          {renderContent()}
+        </div>
+        <Toast message={aiReply} onDismiss={() => setAiReply(null)} />
       </div>
       {showTwoPaneLayout && (
         <div className="hidden md:block w-1/2 bg-slate-900 overflow-y-auto">
