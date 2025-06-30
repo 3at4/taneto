@@ -4,20 +4,32 @@ import { useEffect, useState } from 'react';
 
 interface ToastProps {
   message: string | null;
+  onDismiss?: () => void; // onDismissプロップを追加（オプション）
 }
 
-export default function Toast({ message }: ToastProps) {
+export default function Toast({ message, onDismiss }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (message) {
       setIsVisible(true);
+      
+      // メッセージが表示されてから5秒後に非表示にし、onDismissを呼び出す
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        if (onDismiss) {
+          // アニメーションが終わるのを待ってからonDismissを呼び出す
+          setTimeout(onDismiss, 500); 
+        }
+      }, 5000); // 5秒間表示
+
+      return () => clearTimeout(timer);
     } else {
       setIsVisible(false);
     }
-  }, [message]);
+  }, [message, onDismiss]);
 
-  if (!message) return null;
+  if (!message && !isVisible) return null;
 
   return (
     <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-500 ${
@@ -37,4 +49,4 @@ export default function Toast({ message }: ToastProps) {
       </div>
     </div>
   );
-} 
+}
